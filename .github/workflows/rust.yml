@@ -23,23 +23,21 @@ jobs:
 
     - name: Get Next Version Number
       id: next_version
+      shell: bash
       run: |
-        LATEST_TAG=$(git tag -l "v[0-9]*" --sort=-v:refname | head -n 1 | sed 's/v//')
-        if [ -z "$LATEST_TAG" ]; then
+        LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1 | sed 's/v//')
+        if [[ -z "$LATEST_TAG" ]]; then
           NEW_TAG=1
         else
           NEW_TAG=$((LATEST_TAG + 1))
         fi
         echo "tag=v$NEW_TAG" >> $GITHUB_OUTPUT
-        echo "release v$NEW_TAG"
 
-    - name: Upload to Release
+    - name: Create Release and Upload Asset
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.next_version.outputs.tag }}
         name: Release ${{ steps.next_version.outputs.tag }}
-        files: |
-          target/release/*
-
+        files: target/release/web_terminal
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
