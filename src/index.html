@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Terminal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <style>
+        body { margin: 0; background: #121212; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .toolbar { padding: 10px; background: #1e1e1e; display: flex; gap: 15px; border-bottom: 1px solid #333; align-items: center; }
+        .toolbar label { font-size: 12px; color: #888; font-family: sans-serif; }
+        #terminal-container { flex-grow: 1; position: relative; background: #000; }
+        #terminal { position: absolute; inset: 0; padding: 10px; }
+        input, select { background: #333; color: white; border: 1px solid #444; padding: 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <label>BG <input type="color" id="bg" value="#000000"></label>
+        <label>TEXT <input type="color" id="fg" value="#ffffff"></label>
+        <label>FONT 
+            <select id="font">
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Fira Code', 'Consolas', monospace">Fira Code / Consolas</option>
+                <option value="'Ubuntu Mono', 'Source Code Pro', monospace">Ubuntu Mono</option>
+                <option value="monospace">System Monospace</option>
+            </select>
+        </label>
+    </div>
+    <div id="terminal-container">
+        <div id="terminal"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    
+    <script>
+        const FitAddon = window.FitAddon ? window.FitAddon.FitAddon : null;
+
+        // Initialize with a standard monospace font stack
+        const term = new Terminal({ 
+            cursorBlink: true, 
+            fontSize: 15,
+            fontFamily: "'Courier New', Courier, monospace",
+            allowProposedApi: true
+        });
+        
+        const fit = new FitAddon();
+        term.loadAddon(fit);
+        term.open(document.getElementById('terminal'));
+        
+        const pwd = prompt("Enter Terminal Password:");
+        
+        if (pwd) {
+            const ws = new WebSocket(`ws://${window.location.host}/ws?pwd=${encodeURIComponent(pwd)}`);
+
+            const syncSize = () => {
+                if (fit) fit.fit();
+                if (ws.readyState === 1) {
+                    ws.send(JSON.stringify({ rows: term.rows, cols: term.cols }));
+                }
+            };
+
+            ws.onopen = () => {
+                // Small delay ensures the browser has rendered the container
+                setTimeout(() => {
+                    syncSize();
+                    term.refresh(0, term.rows - 1);
+                }, 100);
+                term.writeln("CONNECTED");
+            };
+
+            ws.onmessage = (e) => term.write(e.data);
+            ws.onclose = () => term.writeln("\r\nDISCONNECTED");
+            
+            term.onData(data => {
+                if (ws.readyState === 1) ws.send(data);
+            });
+
+            window.addEventListener('resize', syncSize);
+
+            document.getElementById('bg').oninput = (e) => {
+                term.options.theme = { ...term.options.theme, background: e.target.value };
+                document.getElementById('terminal-container').style.backgroundColor = e.target.value;
+            };
+            document.getElementById('fg').oninput = (e) => {
+                term.options.theme = { ...term.options.theme, foreground: e.target.value };
+            };
+            document.getElementById('font').onchange = (e) => {
+                term.options.fontFamily = e.target.value;
+                // We must re-fit when font changes because char width changes
+                setTimeout(syncSize, 50);
+            };
+        }
+    </script>
+</body>
+</html>
