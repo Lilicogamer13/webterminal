@@ -11,29 +11,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Essencial para criar a release
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Necessário para ler todas as tags anteriores
+        fetch-depth: 0
 
     - name: Build
       run: cargo build -r --verbose
 
-    - name: Determine Next Version
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v6.2
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        default_bump: patch # Incrementa o último número (0.1.0 -> 0.1.1)
+    - name: Get Next Version Number
+      id: next_version
+      run: |
+        LATEST_TAG=$(git tag -l "v[0-9]*" --sort=-v:refname | head -n 1 | sed 's/v//')
+        if [ -z "$LATEST_TAG" ]; then
+          NEW_TAG=1
+        else
+          NEW_TAG=$((LATEST_TAG + 1))
+        fi
+        echo "tag=v$NEW_TAG" >> $GITHUB_OUTPUT
+        echo "release v$NEW_TAG"
 
-    - name: Create GitHub Release
+    - name: Upload to Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.tag_version.outputs.new_tag }}
-        name: Release ${{ steps.tag_version.outputs.new_tag }}
-        # Substitua 'NOME_DO_SEU_EXECUTAVEL' pelo nome real do binário no seu Cargo.toml
-        files: target/release/webterminal
+        tag_name: ${{ steps.next_version.outputs.tag }}
+        name: Release ${{ steps.next_version.outputs.tag }}
+        files: |
+          target/release/*
+
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
