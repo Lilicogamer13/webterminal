@@ -25,8 +25,8 @@ jobs:
       id: next_version
       shell: bash
       run: |
-        LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1 | sed 's/v//')
-        if [[ -z "$LATEST_TAG" ]]; then
+        LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1 | sed 's/v//' || echo "")
+        if [ -z "$LATEST_TAG" ] || ! [[ "$LATEST_TAG" =~ ^[0-9]+$ ]]; then
           NEW_TAG=1
         else
           NEW_TAG=$((LATEST_TAG + 1))
