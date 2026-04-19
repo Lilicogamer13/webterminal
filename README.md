@@ -1,2 +1,2 @@
-# webterminal - linux only(or at least only tested on linux)
+# webterminal - linux only
 is this even useful, just use ssh or something
