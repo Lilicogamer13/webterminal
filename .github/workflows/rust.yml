@@ -3,6 +3,9 @@ name: Rust
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "**.md"
+      - ".github/workflows/rust.yml" # Ignora alterações neste arquivo
 
 env:
   CARGO_TERM_COLOR: always
